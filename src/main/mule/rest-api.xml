@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="cf727fc0-997e-452d-b831-653d74a6dac8" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="b04f5886-6c0f-45ad-87c1-d5dd32a66f40" >
+		<db:oracle-connection host="localhost" user="SYSTEM" password="Pramshcl@321" instance="xe" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="4ba5a19c-b7b1-4af1-a279-db04185e1023" >
+		<http:listener-connection host="0.0.0.0" port="8082" />
+	</http:listener-config>
+	<flow name="rest-apiFlow" doc:id="ea326bb2-9fde-40b6-84e2-6629298ee1d5" >
+		<http:listener doc:name="Listener" doc:id="ddda106b-79bc-4670-a14f-45e3a0fc24f6" config-ref="HTTP_Listener_config" path="/retrieving-data">
+			<http:response statusCode="#[vars.httpStatus]" reasonPhrase="ok"/>
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="fd00c842-39d4-487e-8413-68ff9035d2c2" message="#[payload]"/>
+		<set-variable value="#[attributes.queryParams.table_name]" doc:name="Set Variable" doc:id="652acc68-0e09-4c13-8a14-4d2a4f605082" variableName="table_name"/>
+		<db:select doc:name="Select" doc:id="8263412d-1f8f-41f5-9a0e-062e9252dd07" config-ref="Database_Config">
+			<db:sql ><![CDATA[select * from elem]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="2d828cd4-e037-4e83-98cd-4c0d40c0cf79" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[200]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="cccacf0f-9fae-46d4-bc87-3604535c6627" message="#[payload]"/>
+	</flow>
+	<flow name="rest-apiFlow1" doc:id="3eb40661-3708-40d8-97e5-7a94b1ce6661" >
+		<http:listener doc:name="Listener" doc:id="10ab4fa9-efbb-44ad-ac37-7eae5038ae17" config-ref="HTTP_Listener_config1" path="/create-resource">
+			<http:response statusCode="#[vars.httpStatus]" />
+		</http:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="c6455f9c-4f0c-4b4b-8977-e190f256852e" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message" doc:id="d82491ff-df36-45bc-90eb-b72220a0d006" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/jSON
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<db:insert doc:name="Insert" doc:id="1c57c044-1edd-453d-bea5-1a2601633be1" config-ref="Database_Config">
+			<db:sql ><![CDATA[insert into elem values (:EID,:DEPNO,:NAME,:SAL)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	"EID" : payload.EID,
+	"DEPNO" : payload.DEPNO,
+	"NAME": payload.NAME,
+    "SAL": payload.SAL
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="12dac6d6-8ee0-4fec-a4a0-2b534b14bec5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message" : "data added successfully"
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="httpStatus" ><![CDATA[201]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="52be53b4-a742-493c-be07-dbb686dff21e" message="#[payload]"/>
+	</flow>
+</mule>
